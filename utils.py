@@ -2,6 +2,7 @@
 # %% [code]
 # %% [code]
 # %% [code]
+# %% [code]
 # %% [code] {"execution":{"iopub.status.busy":"2025-08-11T09:48:58.658268Z","iopub.execute_input":"2025-08-11T09:48:58.658600Z","iopub.status.idle":"2025-08-11T09:48:58.665302Z","shell.execute_reply.started":"2025-08-11T09:48:58.658572Z","shell.execute_reply":"2025-08-11T09:48:58.664205Z"}}
 # This Python 3 environment comes with many helpful analytics libraries installed
 # It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
@@ -289,7 +290,7 @@ def plot_summary_shap(X_processed:np.ndarray, shap_values_obj:shap.Explanation, 
     summary_shap_df : DataFrame sorted by shap value (descending) with columns: 'Feature' and 'Importance'   
     
     """
-    shap_arr = shap_values_obj[-1] if isinstance(shap_values, list) else shap_values_obj
+    shap_arr = shap_values_obj[-1] if isinstance(shap_values_obj, list) else shap_values_obj
     plt.clf()
     shap.summary_plot(shap_arr, features=X_processed, feature_names=transformed_feature_names, plot_type="bar", show=False)
     
