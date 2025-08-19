@@ -3,6 +3,7 @@
 # %% [code]
 # %% [code]
 # %% [code]
+# %% [code]
 # %% [code] {"execution":{"iopub.status.busy":"2025-08-11T09:48:58.658268Z","iopub.execute_input":"2025-08-11T09:48:58.658600Z","iopub.status.idle":"2025-08-11T09:48:58.665302Z","shell.execute_reply.started":"2025-08-11T09:48:58.658572Z","shell.execute_reply":"2025-08-11T09:48:58.664205Z"}}
 # This Python 3 environment comes with many helpful analytics libraries installed
 # It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
@@ -335,22 +336,23 @@ def plot_dependency_shap(X_processed:np.ndarray, shap_values_obj:shap.Explanatio
     
 
 # Save artifacts
-def save_artifacts(suffix:str, pipeline, X_train:pd.DataFrame, X_test:pd.DataFrame, y_train:pd.Series, y_test:pd.Series):
+def save_artifacts(suffix: str, pipeline, X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series):
     '''
-    Save pipeline, xgb model, datasets, and metadata for later reuse.
+    Save pipeline, XGBoost model, datasets, and metadata for later reuse.
     '''
-   
+
+    # Extract pipeline components
     preproc = pipeline.named_steps.get('preprocessor', None)
-    clf = pipeline.named_steps.get('classifier', pipeline) # pipeline is pipeline or model
+    clf = pipeline.named_steps.get('classifier', pipeline)
 
     # Feature names after preprocessing
     try:
         feature_names = list(preproc.get_feature_names_out())
     except Exception:
-        feature_names = [] 
+        feature_names = []
 
-    
-    joblib.dump(pipeline,f'{suffix}_xgboost_pipeline.joblib')
+    # Save pipeline and classifier
+    joblib.dump(pipeline, f'{suffix}_xgboost_pipeline.joblib')
 
     if hasattr(clf, 'feature_importances_'):
         joblib.dump(clf, f'{suffix}_xgb_classifier.joblib')
@@ -359,13 +361,24 @@ def save_artifacts(suffix:str, pipeline, X_train:pd.DataFrame, X_test:pd.DataFra
         except Exception:
             clf.save_model(f'{suffix}_xgb_model.json')
 
-    # Save datasets 
+    # Save datasets
     X_train.to_parquet(f'{suffix}_X_train.parquet', index=False)
     X_test.to_parquet(f'{suffix}_X_test.parquet', index=False)
     y_train.to_frame('target').to_parquet(f'{suffix}_y_train.parquet', index=False)
     y_test.to_frame('target').to_parquet(f'{suffix}_y_test.parquet', index=False)
 
-    #  Save metadata
+    # Extract classifier parameters safely
+    def sanitize_params(params):
+        sanitized = {}
+        for k, v in params.items():
+            try:
+                json.dumps(v)  # test if serializable
+                sanitized[k] = v
+            except TypeError:
+                sanitized[k] = str(v)  # fallback: convert to string
+        return sanitized
+
+    # Save metadata
     meta = {
         'name': suffix,
         'shapes': {
@@ -375,8 +388,12 @@ def save_artifacts(suffix:str, pipeline, X_train:pd.DataFrame, X_test:pd.DataFra
             'y_test': int(y_test.shape[0]),
         },
         'feature_names': feature_names,
-        'classifier_params': clf.get_params() if hasattr(clf, 'get_params') else {},
+        'classifier_params': sanitize_params(clf.get_params()) if hasattr(clf, 'get_params') else {},
+        'pipeline_path': f'{suffix}_xgboost_pipeline.joblib',
+        'classifier_path': f'{suffix}_xgb_classifier.joblib',
+        'model_path': f'{suffix}_xgb_model.json'
     }
+
     with open(f'{suffix}_metadata.json', 'w', encoding='utf-8') as f:
         json.dump(meta, f, indent=2)
 
